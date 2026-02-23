@@ -7,7 +7,9 @@ from google import genai
 import automation
 import detact_data_type
 import os
-
+os.environ.pop("HF_HOME", None)
+os.environ.pop("HUGGINGFACE_HUB_CACHE", None)
+os.environ.pop("HF_TOKEN", None)
 # ================= MEMORY =================
 
 MEMORY_FILE = "memory.json"
@@ -53,11 +55,16 @@ def handle_memory(query):
 
 # ================= TINYLLAMA MODEL =================
 
-def chat():
+def chat(input):
     import requests
 
-    API_KEY = "your_api_key"
-
+    API_KEY = "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"
+    system_prompt = (
+        "You are Jarvis, a smart voice assistant. "
+        "Give short, simple, clear answers. "
+        "Do not use symbols "
+        "Always respond as Jarvis.\n"
+    )
     response = requests.post(
         "https://openrouter.ai/api/v1/chat/completions",
         headers={
@@ -65,15 +72,14 @@ def chat():
         },
         json={
             "model": "mistralai/mistral-7b-instruct",
-            "messages": [{"role": "user", "content": "Hello"}]
+            "messages": [{"role": "user", "content": f"{system_prompt+input}"}]
         }
     )
 
     print(response.json()["choices"][0]["message"]["content"])
 
 # ================= GEMINI FALLBACK (OPTIONAL) =================
-
-GEMINI_KEY = os.getenv("your_api_key")
+GEMINI_KEY = os.getenv("AIzaSyD6obmlHV3qWxfz0uQ_6zx-jAHQQksOcNA")
 
 if GEMINI_KEY:
     client = genai.Client(api_key=GEMINI_KEY)
@@ -84,7 +90,7 @@ You are Jarvis, an advanced AI assistant.
 Respond clearly and stay in context.
 """
 
-    def chat_gemini(prompt):
+def chat_gemini(prompt):
         global chat_history
 
         chat_history.append(f"User: {prompt}")
@@ -99,8 +105,7 @@ Respond clearly and stay in context.
         chat_history.append(f"Jarvis: {reply}")
 
         return reply
-else:
-    client = None
+
 
 
 # ================= WIKIPEDIA =================
@@ -162,13 +167,10 @@ def assistant_router(query):
     elif intent == "chat":
         response = chat(query)
 
-        if client and len(response) < 5:
-            return chat_gemini(query)
-
         return response
 
     else:
-        return chat(query)
+        return chat_gemini(query)
 
 
 # ================= MAIN =================
