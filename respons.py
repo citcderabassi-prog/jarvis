@@ -7,9 +7,7 @@ from google import genai
 import automation
 import detact_data_type
 import os
-os.environ.pop("HF_HOME", None)
-os.environ.pop("HUGGINGFACE_HUB_CACHE", None)
-os.environ.pop("HF_TOKEN", None)
+
 # ================= MEMORY =================
 
 MEMORY_FILE = "memory.json"
@@ -55,47 +53,27 @@ def handle_memory(query):
 
 # ================= TINYLLAMA MODEL =================
 
+def chat():
+    import requests
 
+    API_KEY = "your_api_key"
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
-
-model_name = "microsoft/DialoGPT-small"# small GPT model
-
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name)
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model.to(device)
-
-chat_history_ids = None
-
-def chat_gemini(user_input):
-    global chat_history_ids
-
-    new_input_ids = tokenizer.encode(user_input + tokenizer.eos_token, return_tensors='pt').to(device)
-
-    if chat_history_ids is not None:
-        bot_input_ids = torch.cat([chat_history_ids, new_input_ids], dim=-1)
-    else:
-        bot_input_ids = new_input_ids
-
-    chat_history_ids = model.generate(
-        bot_input_ids,
-        max_new_tokens=60,
-        pad_token_id=tokenizer.eos_token_id
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {API_KEY}"
+        },
+        json={
+            "model": "mistralai/mistral-7b-instruct",
+            "messages": [{"role": "user", "content": "Hello"}]
+        }
     )
 
-    response = tokenizer.decode(
-        chat_history_ids[:, bot_input_ids.shape[-1]:][0],
-        skip_special_tokens=True
-    )
-
-    return response.strip()
-
+    print(response.json()["choices"][0]["message"]["content"])
 
 # ================= GEMINI FALLBACK (OPTIONAL) =================
 
-GEMINI_KEY = os.getenv("AIzaSyD6obmlHV3qWxfz0uQ_6zx-jAHQQksOcNA")
+GEMINI_KEY = os.getenv("your_api_key")
 
 if GEMINI_KEY:
     client = genai.Client(api_key=GEMINI_KEY)
@@ -106,7 +84,7 @@ You are Jarvis, an advanced AI assistant.
 Respond clearly and stay in context.
 """
 
-    def chat(prompt):
+    def chat_gemini(prompt):
         global chat_history
 
         chat_history.append(f"User: {prompt}")
